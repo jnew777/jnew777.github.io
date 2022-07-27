@@ -1,0 +1,247 @@
+<html>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-annotation/2.5.1/d3-annotation.min.js"></script>
+
+  <style>
+    circle {
+      fill: lightblue;
+      stroke: black;
+    }
+    h1 {
+      color: black;
+      font-family: "Raleway", sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 36px;
+      margin: 0 100px 0px 100px;
+      text-align: left;
+      text-transform: uppercase;
+    }
+    svg text {
+      fill: black;
+      font: 15px sans-serif;
+      text-anchor: center;
+    }
+    /* #selectYearContainer {
+      text-align: center;
+    } */
+  </style>
+
+  <body onload="main()">
+    <form>
+      <button formaction="/index.html">Firearms in the Household</button> >
+      <button formaction="/mass.html">Mass Shootings over Time</button> >
+      <button formaction="/lethality.html">
+        The Effects of Firearm Restrictions
+      </button>
+    </form>
+    <h1 id="chart_title1">
+      Household Firearm Ownership and Annual Firearm Fatalities (State)
+    </h1>
+    <br />
+
+    <div id="selectYearContainer">
+      <select id="selectYear"></select>
+    </div>
+
+    <svg width="600" height="400"></svg>
+
+    <script>
+      async function main() {
+        var width = 600;
+        var height = 400;
+        var margin = 50;
+
+        var year = 1999;
+
+        document.getElementById("selectYear").onchange = yearSelected;
+
+        const data = await d3.csv("/data/HFO_JOIN.csv", d3.autoType);
+
+        function drawSelectYear() {
+          var yearOptions = document.getElementById("selectYear");
+          for (let i = 1999; i < 2017; i++) {
+            var el = document.createElement("option");
+            el.textContent = i;
+            el.value = i;
+            yearOptions.appendChild(el);
+          }
+        }
+
+        function yearSelected() {
+          d3.selectAll("circle").remove();
+          d3.selectAll(".annotations").remove();
+          d3.selectAll(".axis").remove(); //not working?
+
+          year = document.getElementById("selectYear").value;
+          //   console.log(year)
+          drawGraph(data);
+        }
+
+        function drawGraph(data) {
+          var currYear = year;
+
+          var averages = [
+            { year: 1999, fatalities: 10.99546828, hfr: 0.41604 },
+            { year: 2000, fatalities: 10.6271579, hfr: 0.42748 },
+            { year: 2001, fatalities: 10.82708629, hfr: 0.38746 },
+            { year: 2002, fatalities: 11.08059783, hfr: 0.39966 },
+            { year: 2003, fatalities: 10.88838455, hfr: 0.38286 },
+            { year: 2004, fatalities: 10.51268391, hfr: 0.39394 },
+            { year: 2005, fatalities: 10.77742904, hfr: 0.38722 },
+            { year: 2006, fatalities: 10.65242881, hfr: 0.37966 },
+            { year: 2007, fatalities: 10.6592612, hfr: 0.38172 },
+            { year: 2008, fatalities: 10.96327841, hfr: 0.385 },
+            { year: 2009, fatalities: 10.7353936, hfr: 0.38506 },
+            { year: 2010, fatalities: 10.96446313, hfr: 0.3786 },
+            { year: 2011, fatalities: 11.02728316, hfr: 0.3854 },
+            { year: 2012, fatalities: 11.47560606, hfr: 0.4071 },
+            { year: 2013, fatalities: 11.47634343, hfr: 0.39012 },
+            { year: 2014, fatalities: 11.40611167, hfr: 0.37782 },
+            { year: 2015, fatalities: 12.38895146, hfr: 0.36512 },
+            { year: 2016, fatalities: 13.01165897, hfr: 0.39696 },
+          ];
+
+          const found = averages.find((average) => average.year == currYear);
+
+          console.log(found);
+
+          t1x = d3.scaleLinear().domain([0, 0.75]).range([0, width]);
+          t1y = d3.scaleLinear().domain([0, 25]).range([height, 0]);
+
+          ave_x = t1x(found.hfr);
+          ave_y = t1y(found.fatalities);
+
+          const ave_annotations = [
+            {
+              note: {
+                label: "",
+                title: "Average Fatality and Household Firearm Rate",
+              },
+              id: "label_year",
+              subject: {
+                radius: 10,
+              },
+
+              color: ["red"],
+              x: ave_x,
+              y: ave_y,
+              dy: 100,
+              dx: 100,
+            },
+          ];
+
+          const arrow_annotations = [
+            {
+              note: {
+                label:
+                  "Firearm fatalities increase with household firearm ownership (by state)",
+              },
+              x: 275,
+              y: 50,
+              dy: 100,
+              dx: -100,
+              type: d3.annotationCalloutElbow,
+              connector: { end: "arrow" },
+            },
+          ];
+
+          const makeAveAnnotations = d3
+            .annotation()
+            .annotations(ave_annotations)
+            .type(d3.annotationCalloutCircle);
+
+          const makeArrowAnnotations = d3
+            .annotation()
+            .annotations(arrow_annotations)
+            .type(d3.annotationCalloutElbow);
+
+          svg = d3
+            .select("svg")
+            .attr("width", width + 2 * margin)
+            .attr("height", height + 2 * margin)
+            .append("g")
+            .attr("transform", "translate(" + margin + "," + margin + ")")
+            .selectAll()
+            .data(data)
+            .enter()
+            .append("circle")
+            .filter(function (d) {
+              return d.Year == year;
+            })
+            .attr("cx", function (d) {
+              return t1x(d.hfr);
+            })
+            .attr("cy", function (d) {
+              return t1y(d.Age_Adjusted_Rate);
+            })
+            .attr("r", function (d) {
+              return 7;
+            })
+            .append("title")
+            .text(function (d) {
+              return d.state;
+            });
+
+          d3.select("svg")
+            .append("g")
+            .attr("transform", "translate(" + margin + "," + margin + ")")
+            .call(d3.axisLeft(t1y));
+
+          d3.select("svg")
+            .append("g")
+            .attr(
+              "transform",
+              "translate(" + margin + "," + (height + margin) + ")"
+            )
+            .call(d3.axisBottom(t1x).tickFormat(d3.format("~%")));
+
+          d3.select("svg")
+            .append("g")
+            .attr("id", "label_year")
+            .attr("transform", "translate(" + margin + "," + margin + ")")
+            .call(makeAveAnnotations);
+
+          d3.select("svg")
+            .append("g")
+            .attr("id", "label_year")
+            .attr("transform", "translate(" + margin + "," + margin + ")")
+            .call(makeArrowAnnotations);
+        }
+
+        drawSelectYear();
+        drawGraph(data);
+      }
+    </script>
+  </body>
+</html>
+
+<!-- .call(d3.axisBottom(xYear).(d3.timeFormat("%Y"))); -->
+<!-- var timespan = d3.extent(data.year);
+
+xYear = d3
+  .scaleTime()
+  .domain([new Date(1980, 0, 1), new Date(2016, 0, 1)])
+  .range([20, width - 20]); -->
+
+<!-- .call(d3.axisBottom(xYear).tickFormat(d3.timeFormat("%Y"))); -->
+
+<!-- .tickValues([0, 150, 50, 600])
+  .tickFormat(d3.format("~s")) -->
+<!-- 
+  .tickValues([0, 150, 50, 600])
+  .tickFormat(d3.format("~s")) -->
+
+<!-- selectedYear = year;
+
+  var index = averages.map(function(x) { return x.year}).indexOf(selectedYear)
+
+  var getYear = averages.filter(function (element){
+      console.log(year);
+      return element.year === year;
+console.log(year) -->
+
+<!-- const results = averages.filter(obj => {
+    return obj.year == 1999;
+})
+console.log(results) -->
