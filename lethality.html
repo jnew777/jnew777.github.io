@@ -1,0 +1,331 @@
+<html>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-annotation/2.5.1/d3-annotation.min.js"></script>
+  <style>
+    h1 {
+      color: black;
+      font-family: "Raleway", sans-serif;
+      font-size: 24;
+      font-weight: 800;
+      line-height: 36px;
+      margin: 0 100px 0px 100px;
+      text-align: left;
+      text-transform: uppercase;
+    }
+    h2 {
+      color: black;
+      font-family: "Raleway", sans-serif;
+      font-size: 18;
+      font-weight: 800;
+      line-height: 24px;
+      margin: 0 100px 0px 100px;
+      text-align: left;
+      text-transform: uppercase;
+    }
+    circle {
+      fill: lightblue;
+      stroke: black;
+    }
+    svg text {
+      fill: black;
+      font: 15px sans-serif;
+      text-anchor: center;
+    }
+
+    .bigButton {
+      color: black;
+      text-align: center;
+      font-size: 18px;
+    }
+    hr.rounded {
+      border-top: 8px solid #bbb;
+      border-radius: 5px;
+    }
+  </style>
+  <body onload="main()">
+    <h1>
+      Examining the Effects of Household Firearm Ownership on Mass Shootings
+    </h1>
+    <br />
+    <form>
+      <form>
+        <button class="bigButton" formaction="/index.html" style="margin-left: 100px;"">
+          Mass Shootings over Time
+        </button>
+        >
+        <button class="bigButton" formaction="/hfr.html">
+          Firearms in the Household
+        </button>
+        >
+        <button class="bigButton" formaction="/lethality.html">
+            Firearm Ownership and Mass Shootings over Time
+        </button>
+      </form>
+    </form>
+    <hr class="rounded" />
+    <br />
+    <h2>
+      <u
+        >Have firearm ownership and mass shootings increased in the same way?</u
+      >
+    </h2>
+    <br />
+    <div>
+      <label style="font-size: 18px; font-family: Raleway, sans-serif; margin-left: 100px"
+        >Select a Metric:
+      </label>
+      <button id="plot_num_events">Number of Mass Shootings</button>
+      <button id="plot_total_victims">
+        Total Number of Mass Shooting Victims
+      </button>
+      <button id="plot_ave_victims">
+        Average Number of Victims in Each Event
+      </button>
+    </div>
+    <br />
+    <h2 id="chart_title"></h2>
+    <svg width="600" height="400"></svg>
+
+    <h2>
+      <em
+        >Nationwide, gun ownership has steadily declined in recent history,
+        while
+      </em>
+    </h2>
+    <h2><em>mass shootings have steeply climbed.</em></h2>
+    <p></p>
+    <h2>
+      <em
+        >widespread gun ownership is associated with increased gun violence in
+        general
+      </em>
+    </h2>
+    <h2><em>but is not as easily related to mass shooting events</em></h2>
+    <script>
+      async function main() {
+        var width = 600;
+        var height = 400;
+        var margin = 50;
+        var lmargin = 100;
+
+        var outcome = "num_events";
+
+        document.getElementById("chart_title").innerHTML =
+          "Number of Mass Shootings each Half-Decade ";
+
+        document
+          .getElementById("plot_num_events")
+          .addEventListener("click", plot_num);
+
+        document
+          .getElementById("plot_total_victims")
+          .addEventListener("click", plot_total_victims);
+
+        document
+          .getElementById("plot_ave_victims")
+          .addEventListener("click", plot_ave_victims);
+
+        function plot_num() {
+          outcome = "num_events";
+          document.getElementById("chart_title").innerHTML =
+            "Number of Mass Shootings each Half-Decade";
+          drawGraph(num_events);
+        }
+
+        function plot_total_victims() {
+          outcome = "total_victims";
+          document.getElementById("chart_title").innerHTML =
+            "Number of People Killed in Mass Shootings each Half-Decade";
+          drawGraph(total_victims);
+        }
+
+        function plot_ave_victims() {
+          outcome = "ave_victims";
+          document.getElementById("chart_title").innerHTML =
+            "Average Number of Victims in a Shooting each Half-Decade";
+          drawGraph(ave_victims);
+        }
+
+        const num_events = await d3.csv(
+          "/data/half_decade_num_events.csv",
+          d3.autoType
+        );
+
+        console.log(num_events);
+
+        const total_victims = await d3.csv(
+          "/data/half_decade_total_victims2.csv",
+          d3.autoType
+        );
+        const ave_victims = await d3.csv(
+          "/data/half_decade_ave_victims.csv",
+          d3.autoType
+        );
+
+        document
+          .getElementById("plot_num_events")
+          .addEventListener("click", clearGraph());
+
+        function clearGraph() {
+          d3.selectAll("circle").remove();
+          d3.select(".annotations").remove();
+          d3.selectAll(".tick").remove();
+          d3.selectAll(".label").remove();
+        }
+        drawGraph(num_events);
+
+        function drawGraph(data) {
+          clearGraph();
+          console.log("outcome type: ", outcome);
+          console.log(data);
+          t2x = d3
+            .scalePoint()
+            .domain([
+              "1980-1984",
+              "1985-1989",
+              "1990-1994",
+              "1995-1999",
+              "2000-2004",
+              "2005-2009",
+              "2010-2014",
+            ])
+            .range([0, width])
+            .padding(0.4);
+
+          t2y = d3.scaleLinear().domain([0.35, 0.55]).range([height, 0]);
+
+          anno_title =
+            "Nationwide household firearm ownership has decreased but mass shootings have not";
+
+          const annotations = [
+            {
+              note: {
+                label: "",
+                title: "Average Fatality and Household Firearm Rate",
+              },
+              id: "label_year",
+              subject: {
+                radius: 10,
+              },
+              x: 500,
+              y: 275,
+              dy: -150,
+              dx: -100,
+              type: d3.annotationCalloutElbow,
+              connector: { end: "arrow" },
+            },
+          ];
+
+          annotations[0].note.title = anno_title;
+
+          const makeAnnotations = d3
+            .annotation()
+            .annotations(annotations)
+            .type(d3.annotationCalloutCircle);
+
+          svg = d3
+            .select("svg")
+            .attr("width", width + 2 * margin)
+            .attr("height", height + 2 * margin)
+            .append("g")
+            .attr("transform", "translate(" + lmargin + "," + margin + ")")
+            .selectAll()
+            .data(data)
+            .enter()
+            .append("circle")
+            // .attr("class", "bar")
+            // .filter(function (d) {
+            //   return d.Year == year;
+            // })
+            .attr("cx", function (d) {
+              return t2x(d.interval);
+            })
+            .attr("cy", function (d) {
+              return t2y(d.ave_hfr);
+            })
+            .attr("r", function (d) {
+              if (outcome == "total_victims") {
+                return d.count / 10;
+              } else {
+                return d.count*1.5;
+              }
+            })
+            // .attr("width", t2x.bandwidth())
+            // .attr("height", function (d) {
+            //   return height - t2y(d.ave_hfr);
+            // })
+            .append("title")
+            .text(function (d) {
+              return d.count;
+            });
+          d3.select("svg")
+            .append("g")
+            .attr("transform", "translate(" + lmargin + "," + margin + ")")
+            .call(d3.axisLeft(t2y).tickFormat(d3.format("~%")));
+
+          d3.select("svg")
+            .append("g")
+            .attr(
+              "transform",
+              "translate(" + lmargin + "," + (height + margin) + ")"
+            )
+            .call(d3.axisBottom(t2x));
+
+          d3.select("svg")
+            .append("text")
+            .attr("class", "x label")
+            .attr(
+              "transform",
+              "translate(" +
+                (lmargin - 450) +
+                "," +
+                (margin + 25) +
+                " ) rotate(-90, 300, 300)"
+            )
+            .attr("text-anchor", "end")
+            .attr("x", width)
+            .attr("y", height - 6)
+            .text("Estimate Household Firearm Ownership (Nationwide)");
+
+          d3.select("svg")
+            .append("g")
+            .attr("id", "label_year")
+            .attr("transform", "translate(" + lmargin + "," + margin + ")")
+            .call(makeAnnotations);
+
+          d3.select("svg")
+            .selectAll("text")
+            .data(data)
+            .enter()
+            .append("text")
+            .attr("text-anchor", "end")
+            .attr("transform", "translate(" + lmargin + "," + margin + ")")
+            .attr("x", function (d) {
+              return t2x(d.interval);
+            })
+            .attr("y", function (d) {
+              return t2y(d.ave_hfr);
+            })
+            .text("xxxxxxxxxxxxxxxxxxxxx");
+
+          //   d3.select("svg")
+          //     .selectAll("text")
+          //     .data(data)
+          //     .enter()
+          //     .append("text")
+          //     .style("text-anchor", "left")
+          //     .attr("transform", "translate(" + lmargin + "," + margin + ")")
+          //     .attr("x", function (d) {
+          //       200;
+          //     })
+          //     .attr("y", function (d) {
+          //       300;
+          //     })
+          //     .text(function (d) {
+          //       return "asdfa;slkdfja;slkdjfa;slkdfj;lkj"
+          //     });
+        }
+      }
+    </script>
+  </body>
+</html>

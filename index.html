@@ -1,0 +1,296 @@
+<html>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-annotation/2.5.1/d3-annotation.min.js"></script>
+  <style>
+    h1 {
+      color: black;
+      font-family: "Raleway", sans-serif;
+      font-size: 24;
+      font-weight: 800;
+      line-height: 36px;
+      margin: 0 100px 0px 100px;
+      text-align: left;
+      text-transform: uppercase;
+    }
+    h2 {
+      color: black;
+      font-family: "Raleway", sans-serif;
+      font-size: 18;
+      font-weight: 800;
+      line-height: 24px;
+      margin: 0 100px 0px 100px;
+      text-align: left;
+      text-transform: uppercase;
+    }
+    circle {
+      fill: lightblue;
+      stroke: black;
+    }
+    svg text {
+      fill: black;
+      font: 15px sans-serif;
+      text-anchor: center;
+    }
+    .container {
+      height: 75px;
+      position: relative;
+      border: 3px solid black;
+    }
+    .center {
+      margin: 0;
+      position: absolute;
+      top: 50%;
+      left: 40%;
+      /* -ms-transform: translate(-50%, -50%); */
+      transform: translate(-50%, -50%);
+    }
+    .bigButton {
+      /* background-color: lightgrey; */
+      color: black;
+      text-align: center;
+      font-size: 18px;
+    }
+    hr.rounded {
+      border-top: 8px solid #bbb;
+      border-radius: 5px;
+    }
+  </style>
+  <body onload="main()">
+    <h1>
+      Examining the Effects of Household Firearm Ownership on Mass Shootings
+    </h1>
+    <br />
+
+    <form>
+      <!-- <div class = "container">   -->
+      <!-- <div class="center"> -->
+      <button
+        class="bigButton"
+        formaction="/index.html"
+        style="margin-left: 100px"
+      >
+        Mass Shootings over Time
+      </button>
+      >
+      <button class="bigButton" formaction="/hfr.html">
+        Firearms in the Household
+      </button>
+      >
+      <button class="bigButton" formaction="/lethality.html">
+        Firearm Ownership and Mass Shootings over Time
+      </button>
+
+      <!-- </div> -->
+
+      <!-- </div> -->
+    </form>
+
+    <hr class="rounded" />
+
+    <br />
+    <h2><u>Have mass shootings become much more frequent?</u></h2>
+    <br />
+
+    <div>
+      <label
+        style="font-size: 18px; font-family: Raleway, sans-serif; margin-left: 100px"
+        for="selectYearButton"
+        >Select a Metric: </label
+      ><button id="plot_killed">Number of Victims Killed</button>
+      <button id="plot_injured">Number of Victims Injured</button>
+      <button id="plot_all">All Victims</button>
+    </div>
+    <br />
+    <h2 id="chart_title"></h2>
+    <svg width="600" height="400"></svg>
+
+    <!-- <div id="conclusion">Does this increase reflect generally increased gun ownership</div> -->
+    <h2>
+      <em
+        >Mass shootings have been increasing, especially so in the last few
+        decades</em
+      >
+    </h2>
+    <br />
+    <form>
+      <button
+        class="bigButton"
+        formaction="/hfr.html"
+        style="margin-left: 100px"
+      >
+        Click to examine if this this gun violence is related to increased gun
+        ownership
+      </button>
+    </form>
+    <br />
+
+    <!-- <select id="selectOutcome"></select> -->
+    <!-- <p id="demo">Click me.</p> -->
+    <script>
+      async function main() {
+        var width = 600;
+        var height = 400;
+        var margin = 50;
+        var lmargin = 100;
+
+        var outcome = "killed";
+
+        document.getElementById("plot_all").addEventListener("click", plot_all);
+        document.getElementById("chart_title").innerHTML =
+          "Number of People Killed in Mass Shootings each Decade";
+        document
+          .getElementById("plot_killed")
+          .addEventListener("click", plot_killed);
+
+        document
+          .getElementById("plot_injured")
+          .addEventListener("click", plot_injured);
+
+        function plot_all() {
+          outcome = "all";
+          document.getElementById("chart_title").innerHTML =
+            "Number of All Victims in Mass Shootings each Decade";
+          drawGraph(data_all);
+        }
+
+        function plot_killed() {
+          outcome = "killed";
+          document.getElementById("chart_title").innerHTML =
+            "Number of People Killed in Mass Shootings each Decade";
+          drawGraph(data_killed);
+        }
+
+        function plot_injured() {
+          document.getElementById("chart_title").innerHTML =
+            "Number of People Injured in Mass Shootings each Decade";
+          outcome = "injured";
+          drawGraph(data_injured);
+        }
+
+        // document.getElementById("selectYear").onchange = yearSelected;
+
+        const data_killed = await d3.csv(
+          "/data/decade_killed.csv",
+          d3.autoType
+        );
+
+        const data_injured = await d3.csv(
+          "/data/decade_injured.csv",
+          d3.autoType
+        );
+        const data_all = await d3.csv("/data/decade_all.csv", d3.autoType);
+
+        // document.getElementById("plot_all").onclick = drawGraph(data_all);
+        document
+          .getElementById("plot_all")
+          .addEventListener("click", clearGraph());
+
+        function clearGraph() {
+          d3.selectAll("rect").remove();
+          d3.select(".annotations").remove();
+          d3.selectAll(".tick").remove();
+          d3.selectAll(".label").remove();
+        }
+        drawGraph(data_killed);
+
+        function drawGraph(data) {
+          clearGraph();
+          //   console.log("outcome type: ", outcomeType);
+          console.log(data);
+          t2x = d3
+            .scaleBand()
+            .domain(["1970s", "1980s", "1990s", "2000s", "2010s"])
+            .range([0, width])
+            .padding(0.4);
+          t2y = d3.scaleLinear().domain([0, 2000]).range([height, 0]);
+
+          const annotations = [
+            {
+              note: {
+                label:
+                  "Numbers of mass shooting victims began increasing dramatically in 2010",
+              },
+              x: 450,
+              y: 100,
+              dy: 100,
+              dx: -100,
+              type: d3.annotationCalloutElbow,
+              connector: { end: "arrow" },
+            },
+          ];
+
+          const makeAnnotations = d3
+            .annotation()
+            .annotations(annotations)
+            .type(d3.annotationCalloutCircle);
+
+          svg = d3
+            .select("svg")
+            .attr("width", width + 2 * margin)
+            .attr("height", height + 2 * margin)
+            .append("g")
+            .attr("transform", "translate(" + lmargin + "," + margin + ")")
+            .selectAll()
+            .data(data)
+            .enter()
+            .append("rect")
+            .attr("class", "bar")
+            // .filter(function (d) {
+            //   return d.Year == year;
+            // })
+            .attr("x", function (d) {
+              return t2x(d.decade);
+            })
+            .attr("y", function (d) {
+              return t2y(d.count);
+            })
+            .attr("width", t2x.bandwidth())
+            .attr("height", function (d) {
+              return height - t2y(d.count);
+            })
+            // .attr("r", function (d) {
+            //   return 5;
+            // })
+            .append("title")
+            .text(function (d) {
+              return d.count;
+            });
+          d3.select("svg")
+            .append("g")
+            .attr("transform", "translate(" + lmargin + "," + margin + ")")
+            .call(d3.axisLeft(t2y));
+
+          d3.select("svg")
+            .append("g")
+            .attr(
+              "transform",
+              "translate(" + lmargin + "," + (height + margin) + ")"
+            )
+            .call(d3.axisBottom(t2x));
+
+          d3.select("svg")
+            .append("text")
+            .attr("class", "x label")
+            .attr(
+              "transform",
+              "translate(" +
+                (lmargin - 460) +
+                "," +
+                (margin + 80) +
+                " ) rotate(-90, 300, 300)"
+            )
+            .attr("text-anchor", "end")
+            .attr("x", width)
+            .attr("y", height - 6)
+            .text("Number of Mass Shooting Victims");
+
+          d3.select("svg")
+            .append("g")
+            .attr("id", "label_year")
+            .attr("transform", "translate(" + lmargin + "," + margin + ")")
+            .call(makeAnnotations);
+        }
+      }
+    </script>
+  </body>
+</html>
